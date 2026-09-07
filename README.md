@@ -1,4 +1,5 @@
-# CloudFlow SaaS - Pilverakenduste Platvorm (Õppetöö Projekt)
+# Saas-Iaas-PaaS
+## CloudFlow SaaS - Pilverakenduste Platvorm (Õppetöö Projekt)
 
 > **Aine:** Pilverakenduste maailm: SaaS-lahenduste loomine ja haldamine  
 > **Eesmärk:** Hinne "A" nõuete täitmine (Multi-tenancy, OAuth 2.0, Stripe Billing, Sentry seire ja Pilve-deploy).
