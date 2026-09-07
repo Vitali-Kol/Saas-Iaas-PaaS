@@ -66,7 +66,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         const { error } = await signInWithEmail(email, password);
         if (error) {
-          setErrorMsg(error.message);
+          if (error.message.toLowerCase().includes('email not confirmed')) {
+            setErrorMsg('⚠️ Email pole kinnitatud! Supabase nõuab vaikimisi kinnitust. Lülita Supabase konsoolis välja: Authentication ➔ Providers ➔ Email ➔ lülita välja "Confirm email" (või kinnita kasutaja Users tabelis).');
+          } else {
+            setErrorMsg(error.message);
+          }
         } else {
           onClose();
         }
