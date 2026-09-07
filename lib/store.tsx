@@ -8,7 +8,7 @@ const INITIAL_TENANTS: Tenant[] = [
     id: 'tenant-baltic-tech',
     name: 'Baltic Tech Solutions OÜ',
     slug: 'baltic-tech',
-    plan: 'pro',
+    plan: 'free',
     createdAt: '2026-01-15',
   },
   {
@@ -22,7 +22,7 @@ const INITIAL_TENANTS: Tenant[] = [
     id: 'tenant-nordic-saas',
     name: 'Nordic AI Analytics',
     slug: 'nordic-ai',
-    plan: 'enterprise',
+    plan: 'free',
     createdAt: '2025-11-20',
   },
 ];
@@ -143,7 +143,7 @@ import { supabase, isSupabaseConfigured } from './supabase';
 export function SaasProvider({ children }: { children: React.ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>(INITIAL_TENANTS);
   const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-baltic-tech');
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
   const [sentryErrors, setSentryErrors] = useState<string[]>([]);
 

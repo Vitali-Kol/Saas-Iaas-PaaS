@@ -413,9 +413,16 @@ function CleanSaaS() {
 
                   <div>
                     {isCurrent ? (
-                      <div className="w-full py-2.5 text-center text-xs font-semibold rounded-xl bg-slate-800 text-slate-400 border border-slate-700 cursor-default">
+                      <div className="w-full py-2.5 text-center text-xs font-semibold rounded-xl bg-slate-800 text-slate-300 border border-slate-700 cursor-default">
                         ✓ Hetkel aktiivne
                       </div>
+                    ) : p.id === 'free' ? (
+                      <button
+                        onClick={() => upgradePlan('free')}
+                        className="w-full py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+                      >
+                        Lülitu tasuta paketile
+                      </button>
                     ) : (
                       <button
                         onClick={() => handleCheckout(p.id)}
@@ -438,6 +445,18 @@ function CleanSaaS() {
               );
             })}
           </div>
+
+          {/* Reset / Downgrade button if not free */}
+          {currentTenant.plan !== 'free' && (
+            <div className="text-center pt-2">
+              <button
+                onClick={() => upgradePlan('free')}
+                className="text-xs text-slate-400 hover:text-rose-400 underline transition-colors"
+              >
+                Tühista tellimus ja lülitu tagasi tasuta (Free) paketile
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
