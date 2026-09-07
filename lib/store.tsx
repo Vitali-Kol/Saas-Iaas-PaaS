@@ -126,8 +126,11 @@ interface SaasContextType {
   updateTaskStatus: (taskId: string, status: 'todo' | 'in_progress' | 'done') => void;
   deleteTask: (taskId: string) => void;
   upgradePlan: (plan: TenantPlan) => void;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: any }>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: any; user: any }>;
+  signInWithOAuth: (provider: 'google' | 'github') => Promise<void>;
   loginAs: (provider: 'google' | 'github') => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   addTenant: (name: string) => void;
   sentryErrors: string[];
   triggerSentryTestError: () => void;
@@ -189,6 +192,45 @@ export function SaasProvider({ children }: { children: React.ReactNode }) {
             );
           }
         });
+
+      // 3. Supabase Auth: Check session and subscribe to auth changes (Slide 6 & 8)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          console.log('✅ Active Supabase user found:', session.user.email);
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Kasutaja',
+            email: session.user.email || '',
+            avatarUrl: session.user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${session.user.id}`,
+            role: 'owner',
+            tenantId: currentTenantId,
+            provider: (session.user.app_metadata?.provider as any) || 'email',
+          });
+        }
+      });
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          console.log('🔑 Supabase auth state change:', _event, session.user.email);
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Kasutaja',
+            email: session.user.email || '',
+            avatarUrl: session.user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${session.user.id}`,
+            role: 'owner',
+            tenantId: currentTenantId,
+            provider: (session.user.app_metadata?.provider as any) || 'email',
+          });
+        } else if (_event === 'SIGNED_OUT') {
+          setCurrentUser(null);
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
   }, []);
 
@@ -279,6 +321,51 @@ export function SaasProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    if (!isSupabaseConfigured()) {
+      loginAs('google');
+      return { error: null };
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.error('Supabase Sign In Error:', error.message);
+    }
+    return { error };
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    if (!isSupabaseConfigured()) {
+      loginAs('google');
+      return { error: null, user: null };
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: email.split('@')[0],
+        },
+      },
+    });
+    if (error) {
+      console.error('Supabase Sign Up Error:', error.message);
+    }
+    return { error, user: data?.user };
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'github') => {
+    if (!isSupabaseConfigured()) {
+      loginAs(provider);
+      return;
+    }
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
+    });
+  };
+
   const loginAs = (provider: 'google' | 'github') => {
     const mockUser: User = {
       id: `user-${Date.now()}`,
@@ -292,7 +379,10 @@ export function SaasProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(mockUser);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (isSupabaseConfigured()) {
+      await supabase.auth.signOut();
+    }
     setCurrentUser(null);
   };
 
@@ -340,6 +430,9 @@ export function SaasProvider({ children }: { children: React.ReactNode }) {
         updateTaskStatus,
         deleteTask,
         upgradePlan,
+        signInWithEmail,
+        signUpWithEmail,
+        signInWithOAuth,
         loginAs,
         logout,
         addTenant,
