@@ -19,7 +19,10 @@ import {
   Bug
 } from 'lucide-react';
 
-export default function DashboardPage() {
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+
+function DashboardContent() {
   const {
     currentTenant,
     tasks,
@@ -27,9 +30,19 @@ export default function DashboardPage() {
     deleteTask,
     currentUser,
     triggerSentryTestError,
+    upgradePlan,
   } = useSaas();
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const paymentStatus = searchParams.get('payment');
+  const upgradedPlan = searchParams.get('plan');
+
+  useEffect(() => {
+    if (paymentStatus === 'success' && upgradedPlan) {
+      upgradePlan(upgradedPlan as any);
+    }
+  }, [paymentStatus, upgradedPlan]);
 
   const todoTasks = tasks.filter((t) => t.status === 'todo');
   const inProgressTasks = tasks.filter((t) => t.status === 'in_progress');
@@ -37,6 +50,24 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Payment Success Alert */}
+      {paymentStatus === 'success' && (
+        <div className="bg-emerald-950/60 border-2 border-emerald-500/50 rounded-2xl p-5 flex items-center justify-between gap-4 text-emerald-200 shadow-xl shadow-emerald-500/10 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-6 h-6 text-emerald-400 flex-shrink-0" />
+            <div>
+              <div className="font-bold text-white text-base">Makse edukalt sooritatud! (Stripe Checkout)</div>
+              <div className="text-xs text-emerald-300">
+                Organisatsioon <strong>{currentTenant.name}</strong> on edukalt uuendatud <strong>{upgradedPlan?.toUpperCase()}</strong> paketile.
+              </div>
+            </div>
+          </div>
+          <span className="text-xs font-mono bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-full">
+            Stripe Verified ✓
+          </span>
+        </div>
+      )}
+
       {/* Header with Tenant info */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div>
@@ -310,5 +341,19 @@ export default function DashboardPage() {
       {/* Task Creation Modal */}
       <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto p-8 text-center text-slate-400">
+          Laadin töölaua andmeid...
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }
