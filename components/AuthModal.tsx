@@ -9,8 +9,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  Chrome,
-  Github,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -209,37 +207,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </span>
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-800" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase">
-            <span className="bg-slate-900 px-2 text-slate-500 font-mono">või OAuth 2.0</span>
-          </div>
-        </div>
-
-        {/* OAuth Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => signInWithOAuth('google')}
-            className="flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-medium py-2 px-3 rounded-xl text-xs transition-all shadow"
-          >
-            <Chrome className="w-3.5 h-3.5 text-red-500" />
-            <span>Google</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => signInWithOAuth('github')}
-            className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-3 rounded-xl text-xs transition-all border border-slate-700"
-          >
-            <Github className="w-3.5 h-3.5" />
-            <span>GitHub</span>
-          </button>
-        </div>
 
         {/* Quick Demo Login Option */}
         <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">

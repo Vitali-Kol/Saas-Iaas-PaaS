@@ -9,8 +9,6 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Chrome,
-  Github,
   CreditCard,
   Check,
   ArrowRight,
@@ -305,36 +303,6 @@ function CleanSaaS() {
                 </span>
               </button>
             </form>
-
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-slate-900 px-2 text-slate-500 font-mono">või OAuth 2.0</span>
-              </div>
-            </div>
-
-            {/* Social Logins */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => signInWithOAuth('google')}
-                className="flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-medium py-2.5 px-3 rounded-xl text-xs transition-all shadow"
-              >
-                <Chrome className="w-3.5 h-3.5 text-red-500" />
-                <span>Google</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => signInWithOAuth('github')}
-                className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl text-xs transition-all border border-slate-700"
-              >
-                <Github className="w-3.5 h-3.5" />
-                <span>GitHub</span>
-              </button>
-            </div>
           </div>
         </div>
       ) : (
