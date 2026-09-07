@@ -12,22 +12,18 @@
    * Struktureeritud koodibaas (Next.js 14 App Router, TypeScript, Tailwind CSS).
    * Valmis GitHubi lükkamiseks ja tiimitööks (Pull Requestid, issue-d).
 
-2. **Identiteedihaldus (Identity Management & OAuth 2.0)**
-   * Ei mingit paroolide kohalikku salvestamist (Slide 6).
-   * Integreeritud OAuth 2.0 (Google ja GitHub) ning toetus Supabase Auth ja Clerk teenustele.
-
-3. **Arveldusteenus (Billing & Stripe)**
+2. **Arveldusteenus (Billing & Stripe)**
    * Freemium ja Tiered Pricing mudelid (Free 0€, Pro 29€, Enterprise 99€).
    * Stripe Checkout otspunkt: `/api/stripe/checkout`
    * Stripe Webhooks otspunkt: `/api/stripe/webhook`
    * Automaatne funktsioonide piiramine (Free plaanil kuni 3 ülesannet).
 
-4. **Multi-tenancy (Andmete Eraldamine)**
+3. **Multi-tenancy (Andmete Eraldamine)**
    * Loogiline andmete eraldamine läbi unikaalse `tenant_id`.
    * Reaalajas tenantite vahetamine päises (nt. *Baltic Tech OÜ*, *Tallinn Roasters Hub*, *Nordic AI*).
    * API otspunkt: `/api/tenants?tenantId=...` tagastab ainult konkreetse organisatsiooni andmed.
 
-5. **Deploy ja Monitooring (Sentry & Pilv)**
+4. **Deploy ja Monitooring (Sentry & Pilv)**
    * Valmis koheseks deploy'ks: **Render**, **Railway** või **Vercel**.
    * Reaalajas süsteemi uptime ja vastuseaja (&lt;200ms) indikaatorid.
    * Vigade püüdmine (Sentry Exception Tracking) koos test-vea nupuga.
