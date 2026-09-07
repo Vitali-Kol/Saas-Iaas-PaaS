@@ -33,8 +33,8 @@ export async function POST(req: Request) {
             quantity: 1,
           },
         ],
-        success_url: `${returnUrl || 'http://localhost:3000'}/dashboard?payment=success&plan=${plan}`,
-        cancel_url: `${returnUrl || 'http://localhost:3000'}/pricing?payment=cancelled`,
+        success_url: `${returnUrl || 'http://localhost:3000'}/?payment=success&plan=${plan}`,
+        cancel_url: `${returnUrl || 'http://localhost:3000'}/?payment=cancelled`,
       });
 
       return NextResponse.json({ url: session.url, mode: 'real' });
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // 2. Demo simulation mode (when students don't have Stripe keys yet during lab)
     return NextResponse.json({
-      url: `/dashboard?payment=success&plan=${plan}&demo=true`,
+      url: `/?payment=success&plan=${plan}&demo=true`,
       mode: 'mock',
       message: 'Stripe Mock Checkout: Simulated successful payment for student testing.',
     });

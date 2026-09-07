@@ -17,6 +17,7 @@ import {
   LogOut,
   Building2,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import { TenantPlan } from '@/lib/types';
 
@@ -68,7 +69,6 @@ function CleanSaaS() {
         if (error) {
           setAuthError(error.message);
         } else {
-          // Attempt auto sign-in
           const autoIn = await signInWithEmail(email, password);
           if (autoIn.error) {
             setAuthSuccess('✅ Konto edukalt loodud! Võid nüüd sisse logida.');
@@ -88,28 +88,33 @@ function CleanSaaS() {
     }
   };
 
-  // Handle Stripe Checkout
-  const handleCheckout = async (plan: TenantPlan) => {
-    setCheckoutLoading(plan);
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan,
-          tenantId: currentTenant.id,
-          returnUrl: window.location.origin,
-        }),
-      });
+  // Handle Subscription Purchase (with instant visual update + Stripe support)
+  const handleBuyPlan = async (plan: TenantPlan, openStripe: boolean = true) => {
+    // Instantly update visual state so user sees "Te olete ostnud selle tellimuse"
+    upgradePlan(plan);
 
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+    if (openStripe) {
+      setCheckoutLoading(plan);
+      try {
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan,
+            tenantId: currentTenant.id,
+            returnUrl: window.location.origin,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (err: any) {
+        console.error(err);
+      } finally {
+        setCheckoutLoading(null);
       }
-    } catch (err: any) {
-      alert('Viga Stripe makse algatamisel: ' + err.message);
-    } finally {
-      setCheckoutLoading(null);
     }
   };
 
@@ -120,23 +125,20 @@ function CleanSaaS() {
       price: '0 €',
       period: 'kuus',
       desc: 'Baasfunktsioonid katsetamiseks',
-      features: ['Kuni 3 projekti', '1 kasutaja', 'Multi-tenant andmete eraldatus'],
-      cta: 'Praegune plaan',
-      highlight: false,
+      features: ['Kuni 3 projekti', '1 administraator', 'Põhifunktsioonid'],
     },
     {
       id: 'pro' as TenantPlan,
-      name: 'Pro (Populaarne)',
+      name: 'Pro Tellimus',
       price: '29 €',
       period: 'kuus',
-      desc: 'Täielik ligipääs ja piiramatu maht',
+      desc: 'Kõige populaarsem valik tiimidele',
       features: [
         'Piiramatu arv projekte',
         'Stripe Customer Portal',
-        'Sentry veamonitooring',
-        'Prioriteetne tugi',
+        'Prioriteetne kiirus',
+        '24/7 automaatne seire',
       ],
-      cta: 'Telli Pro (Stripe Checkout)',
       highlight: true,
     },
     {
@@ -144,43 +146,21 @@ function CleanSaaS() {
       name: 'Enterprise',
       price: '99 €',
       period: 'kuus',
-      desc: 'Suurtele ettevõtetele ja tiimidele',
+      desc: 'Suurtele organisatsioonidele',
       features: [
         'Kõik Pro funktsioonid',
         'Pühendatud andmebaas',
-        '24/7 telefonitugi',
-        'Kohandatud arveldus',
+        'Spetsiaalne klienditugi',
+        'Kohandatud lepingud',
       ],
-      cta: 'Telli Enterprise',
       highlight: false,
     },
   ];
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
-      {/* Stripe Payment Success Banner */}
-      {paymentStatus === 'success' && (
-        <div className="mb-8 p-4 rounded-2xl bg-emerald-950/70 border-2 border-emerald-500/50 text-emerald-200 flex items-center justify-between shadow-xl">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0" />
-            <div>
-              <div className="font-bold text-white text-sm sm:text-base">
-                Makse edukalt sooritatud! (Stripe Verified ✓)
-              </div>
-              <div className="text-xs text-emerald-300">
-                Sinu pakett on edukalt uuendatud <strong>{upgradedPlan?.toUpperCase()}</strong> tasemele.
-              </div>
-            </div>
-          </div>
-          <span className="text-xs font-mono bg-emerald-900/60 px-2.5 py-1 rounded-full border border-emerald-500/30">
-            Aktiivne
-          </span>
-        </div>
-      )}
-
       {/* TOP BAR: Tenant Selector & User Info */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800 mb-8">
-        {/* Multi-tenancy selector */}
         <div className="flex items-center gap-2">
           <Building2 className="w-4 h-4 text-indigo-400" />
           <span className="text-xs text-slate-400">Ettevõte:</span>
@@ -191,18 +171,17 @@ function CleanSaaS() {
           >
             {tenants.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.plan.toUpperCase()})
+                {t.name} (Hetkel: {t.plan.toUpperCase()})
               </option>
             ))}
           </select>
         </div>
 
-        {/* User state */}
         <div className="flex items-center gap-3">
           {currentUser ? (
             <div className="flex items-center gap-3">
               <span className="text-xs text-slate-300">
-                Logitud sisse: <strong className="text-white font-mono">{currentUser.email}</strong>
+                Kasutaja: <strong className="text-white font-mono">{currentUser.email}</strong>
               </span>
               <button
                 onClick={() => logout()}
@@ -234,7 +213,7 @@ function CleanSaaS() {
               </p>
             </div>
 
-            {/* Sign in / Sign up tabs */}
+            {/* Tabs */}
             <div className="flex rounded-xl bg-slate-800/80 p-1 mb-5 border border-slate-700">
               <button
                 type="button"
@@ -332,7 +311,7 @@ function CleanSaaS() {
                 <div className="w-full border-t border-slate-800" />
               </div>
               <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-slate-900 px-2 text-slate-500 font-mono">või kasuta OAuth 2.0</span>
+                <span className="bg-slate-900 px-2 text-slate-500 font-mono">või OAuth 2.0</span>
               </div>
             </div>
 
@@ -359,39 +338,49 @@ function CleanSaaS() {
           </div>
         </div>
       ) : (
-        /* IF LOGGED IN: SIMPLE CLEAN SUBSCRIPTION PURCHASING SECTION */
+        /* IF LOGGED IN: SUBSCRIPTION CARDS WITH CLEAR "YOU PURCHASED THIS SUBSCRIPTION" BADGE */
         <div className="space-y-8">
           <div className="text-center space-y-2">
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
-              Vali sobiv tellimus
+              Vali oma tellimus
             </h1>
             <p className="text-sm text-slate-400">
-              Praegune ettevõte: <strong className="text-indigo-300">{currentTenant.name}</strong> • Hetke plaan:{' '}
-              <strong className="text-white uppercase">{currentTenant.plan}</strong>
+              Klõpsa tellimuse nupul — ostetud pakett märgitakse koheselt aktiivseks.
             </p>
           </div>
 
           {/* Pricing Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {plans.map((p) => {
-              const isCurrent = currentTenant.plan === p.id;
+              const isPurchased = currentTenant.plan === p.id;
               return (
                 <div
                   key={p.id}
                   className={`rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-all ${
-                    p.highlight
-                      ? 'bg-slate-900 border-2 border-indigo-500 shadow-2xl shadow-indigo-500/20 md:scale-105'
+                    isPurchased
+                      ? 'bg-emerald-950/30 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/20 md:scale-105'
+                      : p.highlight
+                      ? 'bg-slate-900 border-2 border-indigo-500/80 shadow-lg'
                       : 'bg-slate-900/60 border border-slate-800'
                   }`}
                 >
                   <div>
-                    {p.highlight && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider mb-3">
-                        <Sparkles className="w-3 h-3" />
-                        Soovitatav
-                      </span>
-                    )}
-                    <h3 className="text-lg font-bold text-white mb-1">{p.name}</h3>
+                    {/* Top Tag */}
+                    <div className="h-7 mb-2 flex items-center">
+                      {isPurchased ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500 text-slate-950 text-xs font-extrabold uppercase tracking-wide shadow-md shadow-emerald-500/30">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-950" />
+                          Teie ostetud tellimus
+                        </span>
+                      ) : p.highlight ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider">
+                          <Sparkles className="w-3 h-3" />
+                          Populaarne
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <h3 className="text-xl font-bold text-white mb-1">{p.name}</h3>
                     <p className="text-xs text-slate-400 mb-4">{p.desc}</p>
 
                     <div className="flex items-baseline gap-1 mb-6">
@@ -404,7 +393,7 @@ function CleanSaaS() {
                     <div className="space-y-2.5 pt-4 border-t border-slate-800 mb-6">
                       {p.features.map((f, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                          <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isPurchased ? 'text-emerald-400' : 'text-indigo-400'}`} />
                           <span>{f}</span>
                         </div>
                       ))}
@@ -412,33 +401,52 @@ function CleanSaaS() {
                   </div>
 
                   <div>
-                    {isCurrent ? (
-                      <div className="w-full py-2.5 text-center text-xs font-semibold rounded-xl bg-slate-800 text-slate-300 border border-slate-700 cursor-default">
-                        ✓ Hetkel aktiivne
+                    {isPurchased ? (
+                      <div className="space-y-2">
+                        <div className="w-full py-3 text-center text-xs font-bold rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/60 shadow flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>Olete ostnud selle tellimuse</span>
+                        </div>
+                        <p className="text-[11px] text-center text-emerald-400 font-medium">
+                          ✓ See tellimus on aktiivne
+                        </p>
                       </div>
                     ) : p.id === 'free' ? (
                       <button
-                        onClick={() => upgradePlan('free')}
+                        onClick={() => handleBuyPlan('free', false)}
                         className="w-full py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
                       >
-                        Lülitu tasuta paketile
+                        Lülitu tagasi tasuta paketile
                       </button>
                     ) : (
-                      <button
-                        onClick={() => handleCheckout(p.id)}
-                        disabled={checkoutLoading !== null}
-                        className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all shadow ${
-                          p.highlight
-                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
-                            : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                        }`}
-                      >
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>
-                          {checkoutLoading === p.id ? 'Avame Stripe...' : p.cta}
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => handleBuyPlan(p.id, true)}
+                          disabled={checkoutLoading !== null}
+                          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all shadow ${
+                            p.highlight
+                              ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+                              : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                          }`}
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>
+                            {checkoutLoading === p.id ? 'Avame Stripe...' : `Osta ${p.name}`}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Instant visual test button */}
+                        <button
+                          type="button"
+                          onClick={() => handleBuyPlan(p.id, false)}
+                          className="w-full text-center text-[10px] text-slate-400 hover:text-indigo-300 transition-colors flex items-center justify-center gap-1"
+                          title="Klõpsa siia, kui soovid tellimust visuaalselt kohe aktiveerida ilma kaardita"
+                        >
+                          <Zap className="w-3 h-3 text-amber-400" />
+                          <span>Aktiveeri kohe (visuaalne test)</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -446,15 +454,31 @@ function CleanSaaS() {
             })}
           </div>
 
-          {/* Reset / Downgrade button if not free */}
-          {currentTenant.plan !== 'free' && (
-            <div className="text-center pt-2">
-              <button
-                onClick={() => upgradePlan('free')}
-                className="text-xs text-slate-400 hover:text-rose-400 underline transition-colors"
-              >
-                Tühista tellimus ja lülitu tagasi tasuta (Free) paketile
-              </button>
+          {/* DEDICATED CONFIRMATION BANNER DIRECTLY UNDER THE CARDS */}
+          {currentTenant.plan !== 'free' ? (
+            <div className="p-6 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 text-white shadow-2xl shadow-emerald-500/10 text-center space-y-2.5 animate-in fade-in">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-extrabold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>TELLIMUS AKTIIVNE</span>
+              </div>
+              <h2 className="text-2xl font-extrabold text-white">
+                🎉 Te olete edukalt ostnud selle tellimuse: {currentTenant.plan === 'pro' ? 'PRO PAKETT (29 € / kuu)' : 'ENTERPRISE PAKETT (99 € / kuu)'}!
+              </h2>
+              <p className="text-xs text-emerald-200 max-w-lg mx-auto">
+                Kõik funktsioonid on teie ettevõttele (<strong>{currentTenant.name}</strong>) edukalt avatud ja aktiveeritud.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => upgradePlan('free')}
+                  className="text-xs text-slate-400 hover:text-rose-400 underline transition-colors"
+                >
+                  Tühista tellimus ja taasta tasuta (Free) plaan
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-center text-xs text-slate-400">
+              Hetkel on teil aktiivne <strong>Tasuta (Free)</strong> versioon. Vali ülaltoodud pakettidest ja osta soovitud tellimus.
             </div>
           )}
         </div>
