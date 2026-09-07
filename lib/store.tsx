@@ -135,12 +135,62 @@ interface SaasContextType {
 
 const SaasContext = createContext<SaasContextType | null>(null);
 
+import { supabase, isSupabaseConfigured } from './supabase';
+
 export function SaasProvider({ children }: { children: React.ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>(INITIAL_TENANTS);
   const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-baltic-tech');
   const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
   const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
   const [sentryErrors, setSentryErrors] = useState<string[]>([]);
+
+  // Real-time synchronization with Supabase (Slide 6 & 8)
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      console.log('⚡ Connecting to Supabase database:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+      // 1. Fetch tenants from Supabase
+      supabase
+        .from('tenants')
+        .select('*')
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            console.log('✅ Loaded tenants from Supabase:', data);
+            setTenants(
+              data.map((d: any) => ({
+                id: d.id,
+                name: d.name,
+                slug: d.id,
+                plan: (d.plan as TenantPlan) || 'free',
+                createdAt: d.created_at ? d.created_at.split('T')[0] : '2026-01-01',
+              }))
+            );
+          }
+        });
+
+      // 2. Fetch tasks from Supabase
+      supabase
+        .from('tasks')
+        .select('*')
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            console.log('✅ Loaded tasks from Supabase:', data);
+            setTasks(
+              data.map((d: any) => ({
+                id: d.id.toString(),
+                tenantId: d.tenant_id,
+                title: d.title,
+                description: d.description || '',
+                status: d.status || 'todo',
+                priority: 'medium',
+                assignedTo: d.assigned_to || 'Tiimiliige',
+                createdAt: d.created_at ? d.created_at.split('T')[0] : '2026-09-07',
+              }))
+            );
+          }
+        });
+    }
+  }, []);
 
   const currentTenant = tenants.find((t) => t.id === currentTenantId) || tenants[0];
 
@@ -166,22 +216,67 @@ export function SaasProvider({ children }: { children: React.ReactNode }) {
     };
 
     setTasks((prev) => [newTask, ...prev]);
+
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('tasks')
+        .insert({
+          tenant_id: currentTenant.id,
+          title,
+          description,
+          status: 'todo',
+          assigned_to: currentUser?.name || 'Tiimiliige',
+        })
+        .then(({ error }) => {
+          if (error) console.warn('Supabase insert warning:', error.message);
+        });
+    }
   };
 
   const updateTaskStatus = (taskId: string, status: 'todo' | 'in_progress' | 'done') => {
     setTasks((prev) =>
       prev.map((task) => (task.id === taskId && task.tenantId === currentTenant.id ? { ...task, status } : task))
     );
+
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('tasks')
+        .update({ status })
+        .eq('id', taskId)
+        .then(({ error }) => {
+          if (error) console.warn('Supabase update warning:', error.message);
+        });
+    }
   };
 
   const deleteTask = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => !(t.id === taskId && t.tenantId === currentTenant.id)));
+
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+        .then(({ error }) => {
+          if (error) console.warn('Supabase delete warning:', error.message);
+        });
+    }
   };
 
   const upgradePlan = (plan: TenantPlan) => {
     setTenants((prev) =>
       prev.map((t) => (t.id === currentTenant.id ? { ...t, plan } : t))
     );
+
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('tenants')
+        .update({ plan })
+        .eq('id', currentTenant.id)
+        .then(({ error }) => {
+          if (error) console.warn('Supabase plan update warning:', error.message);
+        });
+    }
   };
 
   const loginAs = (provider: 'google' | 'github') => {
@@ -212,6 +307,19 @@ export function SaasProvider({ children }: { children: React.ReactNode }) {
     };
     setTenants((prev) => [...prev, newT]);
     setCurrentTenantId(newId);
+
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('tenants')
+        .insert({
+          id: newId,
+          name,
+          plan: 'free',
+        })
+        .then(({ error }) => {
+          if (error) console.warn('Supabase tenant insert warning:', error.message);
+        });
+    }
   };
 
   const triggerSentryTestError = () => {
