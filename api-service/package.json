@@ -1,1 +1,10 @@
-
+{
+  "name": "api-service",
+  "version": "1.0.0",
+  "description": "Microservice with Environment Variables (The Config Factor)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
